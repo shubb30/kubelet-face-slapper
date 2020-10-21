@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    service: kube-slap-kubelet-face-slapper
+  name: kubelet-face-slapper
+  namespace: kube-slap
+spec:
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      service: kube-slap-kubelet-face-slapper
+  template:
+    metadata:
+      labels:
+        service: kube-slap-kubelet-face-slapper
+    spec:
+      containers:
+      - env:
+        - name: KUBELET_INTERVAL
+          value: "120"
+        - name: KUBELET_CHECK_STRING
+          value: use of closed network connection
+        - name: KUBELET_CHECK_SEPARATOR
+          value: ','
+        - name: KUBELET_STRING_THRESHOLD
+          value: "3"
+        - name: LOG_DEBUG
+          value: "false"
+        - name: MY_NODE_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.nodeName
+        image: <your-repository>/kubelet-face-slapper:latest
+        imagePullPolicy: IfNotPresent
+        name: kubelet-face-slapper
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /var/run/docker.sock
+          mountPropagation: None
+          name: docker-sock
+      dnsPolicy: ClusterFirst
+      imagePullSecrets:
+      - name: <your-repo-creds-secret>
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      shareProcessNamespace: false
+      terminationGracePeriodSeconds: 30
+      tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/controlplane
+        operator: Equal
+        value: "true"
+      - effect: NoExecute
+        key: node-role.kubernetes.io/etcd
+        operator: Equal
+        value: "true"
+      volumes:
+      - hostPath:
+          path: /var/run/docker.sock
+          type: File
+        name: docker-sock
+  updateStrategy:
+    rollingUpdate:
+      maxUnavailable: 1
+    type: RollingUpdate
